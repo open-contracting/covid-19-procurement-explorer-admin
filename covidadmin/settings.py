@@ -23,9 +23,9 @@ env = environ.Env(
     DEBUG=(bool, True),
     ALLOWED_HOSTS=(list, []),
     DB_ENGINE=(str, "django.db.backends.postgresql_psycopg2"),
-    DB_NAME=(str, "covid19"),
-    DB_USER=(str, ""),
-    DB_PASSWORD=(str, ""),
+    DB_NAME=(str, "covid_test_db_2"),
+    DB_USER=(str, "postgres"),
+    DB_PASSWORD=(str, "postgres"),
     DB_HOST=(str, "localhost"),
     DB_PORT=(int, 5432),
     STATIC_URL=(str, "/static/"),
@@ -39,15 +39,15 @@ env = environ.Env(
 )
 
 
-if "SENTRY_DSN" in os.environ:
-    sentry_sdk.init(
-        dsn=env("SENTRY_DSN"),
-        integrations=[DjangoIntegration()],
-        traces_sample_rate=1.0,
-        # If you wish to associate users to errors (assuming you are using
-        # django.contrib.auth) you may enable sending PII data.
-        send_default_pii=True,
-    )
+# if "SENTRY_DSN" in os.environ:
+#     sentry_sdk.init(
+#         dsn=env("SENTRY_DSN"),
+#         integrations=[DjangoIntegration()],
+#         traces_sample_rate=1.0,
+#         # If you wish to associate users to errors (assuming you are using
+#         # django.contrib.auth) you may enable sending PII data.
+#         send_default_pii=True,
+#     )
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent

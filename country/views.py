@@ -1,8 +1,12 @@
+import operator
+
+import django_filters
 from django.contrib import messages
 from django.core import management
 from django.db.models import Sum
-from django.http.response import HttpResponseRedirect
+from django.http.response import HttpResponseRedirect, JsonResponse
 from django.utils.translation import ugettext_lazy as _
+from django_filters import FilterSet
 from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework import viewsets
 from rest_framework.decorators import action
@@ -10,7 +14,7 @@ from rest_framework.filters import OrderingFilter
 from rest_framework.pagination import LimitOffsetPagination, PageNumberPagination
 from rest_framework.response import Response
 from rest_framework.views import APIView
-
+from rest_framework.renderers import JSONRenderer
 from country.models import ImportBatch
 from country.tasks import store_in_temp_table
 from vizualization.views import add_filter_args
@@ -132,10 +136,22 @@ class TenderView(viewsets.ModelViewSet):
         )
 
 
+class BuyerFilter(FilterSet):
+    product = django_filters.NumberFilter(field_name='goods_services__goods_services_category')
+    country = django_filters.CharFilter(field_name='tenders__country__country_code_alpha_2')
+    buyer_name = django_filters.CharFilter(field_name='buyer_name')
+
+    class Meta:
+        model = Buyer
+        fields = ['product', 'country', 'buyer_name']
+
+
 class BuyerView(viewsets.ModelViewSet):
     pagination_class = LimitOffsetPagination
-    filter_backends = [OrderingFilter]
+    filter_backends = [OrderingFilter, DjangoFilterBackend, ]
+    filter_class = BuyerFilter
     serializer_class = BuyerSerializer
+    filter_fields = ('buyer_name',)
     ordering_fields = [
         "tender_count",
         "supplier_count",
@@ -153,29 +169,69 @@ class BuyerView(viewsets.ModelViewSet):
         instance = Buyer.objects.filter(id=pk)[0]
         return Response(self.get_serializer(instance).data)
 
+    def list(self, request):
+        order = 'DESC'
+        country = 'MD'
+
+        raw_query = f" SELECT \
+                        country_buyer.id \
+                        , max( country_country.name) as country_name \
+                        , max(country_buyer.buyer_name) as buyer_name  \
+                        , sum(country_goodsservices.contract_value_usd) as amount_usd \
+                        , sum(country_goodsservices.contract_value_local) as amount_local \
+                        , count(distinct(country_goodsservices.contract_id)) as tender_count \
+                        , count(distinct(country_goodsservices.goods_services_category_id)) as product_category_count \
+                        , count(country_tender_red_flag.id) as red_flag_count \
+                        , count(distinct(country_tender_red_flag.tender_id)) as red_flag_tender_count \
+                        , case when (count(country_tender_red_flag.id) > 0 ) then (count(distinct(country_tender_red_flag.tender_id)) /  \
+                                                                                   count(country_tender_red_flag.id)) else 0 end as red_flag_tender_percentage \
+                        FROM country_buyer \
+                        JOIN country_tender on country_tender.buyer_id = country_buyer.id \
+                        JOIN country_goodsservices on country_tender.id = country_goodsservices.contract_id \
+                        LEFT JOIN country_country on country_country.id = country_tender.country_id \
+                        LEFT JOIN country_tender_red_flag on country_tender_red_flag.tender_id = country_tender.id \
+                        WHERE 1=1 \
+                        AND country_country.country_code_alpha_2 = '{country}' \
+                        GROUP BY country_buyer.id \
+                        ORDER BY amount_usd  \
+                        {order} "
+        queryset = Buyer.objects.raw(raw_query)
+        paginator = LimitOffsetPagination()
+        result = paginator.paginate_queryset(queryset, request)
+        serializer = BuyerSerializer(result, many=True, context={'request': request})
+        # data = JSONRenderer().render(serializer.data)
+        return JsonResponse(serializer.data, safe=False)
+
     def get_queryset(self):
-        #    country, buyer name, value range, red flag range
-        country = self.request.GET.get("country", None)
-        buyer_name = self.request.GET.get("buyer_name", None)
-        product_id = self.request.GET.get("product", None)
-        contract_value_usd = self.request.GET.get("contract_value_usd", None)
-        value_comparison = self.request.GET.get("value_comparison", None)
-        filter_args = {}
-        annotate_args = {}
-        if country:
-            filter_args["tenders__country__country_code_alpha_2"] = country
-        if buyer_name:
-            filter_args["buyer_name__contains"] = buyer_name
-        if product_id:
-            filter_args["tenders__goods_services__goods_services_category"] = product_id
-        if contract_value_usd and value_comparison:
-            if value_comparison == "gt":
-                annotate_args["sum"] = Sum("tenders__goods_services__contract_value_usd")
-                filter_args["sum__gte"] = contract_value_usd
-            elif value_comparison == "lt":
-                annotate_args["sum"] = Sum("tenders__goods_services__contract_value_usd")
-                filter_args["sum__lte"] = contract_value_usd
-        return Buyer.objects.prefetch_related("tenders").annotate(**annotate_args).filter(**filter_args).distinct()
+        order = 'ASC'
+        raw_query = f" SELECT \
+                                    country_buyer.id \
+                                    , max(country_buyer.buyer_name) as buyer_name \
+                                    , sum(country_goodsservices.contract_value_usd) as amount_usd \
+                                    , sum(country_goodsservices.contract_value_local) as amount_local \
+                                    , sum(distinct(country_goodsservices.contract_id)) as tender_count \
+                                    FROM country_buyer \
+                                    JOIN \
+                                    country_tender \
+                                    ON \
+                                    country_tender.buyer_id = country_buyer.id \
+                                    JOIN \
+                                    country_goodsservices \
+                                    ON \
+                                    country_tender.id = country_goodsservices.contract_id \
+                                    WHERE \
+                                    country_tender.country_id = 6 \
+                                    GROUP \
+                                    BY \
+                                    country_buyer.id \
+                                    ORDER \
+                                    BY amount_usd \
+                                    {order} \
+                                    limit 20 "
+        queryset = Buyer.objects.raw(raw_query)
+        serializer = BuyerSerializer(queryset, many=True)
+        # data = JSONRenderer().render(serializer.data)
+        return Response(serializer.data)
 
 
 class SupplierView(viewsets.ModelViewSet):
