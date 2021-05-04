@@ -26,8 +26,8 @@ class TopSuppliers(APIView):
             .values("supplier__id", "supplier__supplier_name", "country__currency")
             .annotate(
                 count=Count("id"),
-                usd=Sum("goods_services__contract_value_usd"),
-                local=Sum("goods_services__contract_value_local"),
+                usd=Sum("contract_value_usd"),
+                local=Sum("contract_value_local"),
             )
             .exclude(usd__isnull=True)
             .order_by("-usd")[:10]
@@ -37,9 +37,9 @@ class TopSuppliers(APIView):
             .exclude(goods_services__contract_value_usd__isnull=True)
             .values("supplier__id", "supplier__supplier_name", "country__currency")
             .annotate(
-                count=Count("goods_services__contract__id", distinct=True),
-                usd=Sum("goods_services__contract_value_usd"),
-                local=Sum("goods_services__contract_value_local"),
+                count=Count("id", distinct=True),
+                usd=Sum("contract_value_usd"),
+                local=Sum("contract_value_local"),
             )
             .exclude(usd__isnull=True)
             .order_by("-count")[:10]

@@ -34,16 +34,14 @@ class TotalSpendingsView(APIView):
         total_country_tender_amount = (
             Tender.objects.filter(**filter_args)
             .exclude(**exclude_args)
-            .aggregate(
-                usd=Sum("goods_services__contract_value_usd"), local=Sum("goods_services__contract_value_local")
-            )
+            .aggregate(usd=Sum("contract_value_usd"), local=Sum("contract_value_local"))
         )
 
         bar_chart = (
             Tender.objects.filter(**filter_args)
             .exclude(**exclude_args)
             .values("procurement_procedure")
-            .annotate(usd=Sum("goods_services__contract_value_usd"), local=Sum("goods_services__contract_value_local"))
+            .annotate(usd=Sum("contract_value_usd"), local=Sum("contract_value_local"))
         )
         selective_sum_local = 0
         limited_sum_local = 0
@@ -78,7 +76,7 @@ class TotalSpendingsView(APIView):
             .exclude(**exclude_args)
             .annotate(month=TruncMonth("contract_date"))
             .values("month")
-            .annotate(usd=Sum("goods_services__contract_value_usd"), local=Sum("goods_services__contract_value_local"))
+            .annotate(usd=Sum("contract_value_usd"), local=Sum("contract_value_local"))
             .order_by("-month")
         )
         line_chart_local_list = [{"date": i["month"], "value": i["local"]} for i in line_chart]
