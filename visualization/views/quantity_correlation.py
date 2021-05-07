@@ -27,8 +27,8 @@ class QuantityCorrelation(APIView):
                 .values("month", "country__currency")
                 .annotate(
                     count=Count("id"),
-                    usd=Sum("goods_services__contract_value_usd"),
-                    local=Sum("goods_services__contract_value_local"),
+                    usd=Sum("contract_value_usd"),
+                    local=Sum("contract_value_local"),
                 )
                 .order_by("-month")
             )
@@ -36,7 +36,7 @@ class QuantityCorrelation(APIView):
             contracts_quantity = (
                 Tender.objects.annotate(month=TruncMonth("contract_date"))
                 .values("month")
-                .annotate(count=Count("id"), usd=Sum("goods_services__contract_value_usd"))
+                .annotate(count=Count("id"), usd=Sum("contract_value_usd"))
                 .order_by("-month")
             )
 

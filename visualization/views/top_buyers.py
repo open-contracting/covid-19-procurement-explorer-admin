@@ -27,8 +27,8 @@ class TopBuyers(APIView):
             .values("buyer__id", "buyer__buyer_name", "country__currency")
             .annotate(
                 count=Count("id"),
-                usd=Sum("goods_services__contract_value_usd"),
-                local=Sum("goods_services__contract_value_local"),
+                usd=Sum("contract_value_usd"),
+                local=Sum("contract_value_local"),
             )
             .order_by("-usd")[:10]
         )
@@ -37,9 +37,9 @@ class TopBuyers(APIView):
             .exclude(goods_services__contract_value_usd__isnull=True)
             .values("buyer__id", "buyer__buyer_name", "country__currency")
             .annotate(
-                count=Count("goods_services__contract__id", distinct=True),
-                usd=Sum("goods_services__contract_value_usd"),
-                local=Sum("goods_services__contract_value_local"),
+                count=Count("id", distinct=True),
+                usd=Sum("contract_value_usd"),
+                local=Sum("contract_value_local"),
             )
             .order_by("-count")[:10]
         )

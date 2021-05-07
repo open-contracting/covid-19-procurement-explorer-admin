@@ -58,8 +58,8 @@ class Command(BaseCommand):
                 .values("id")
                 .aggregate(
                     total_contracts=Count("id", distinct=True),
-                    total_usd=Sum("goods_services__contract_value_usd", distinct=True),
-                    total_local=Sum("goods_services__contract_value_local", distinct=True),
+                    total_usd=Sum("contract_value_usd", distinct=True),
+                    total_local=Sum("contract_value_local", distinct=True),
                     direct_contracts=Count("id", distinct=True, filter=Q(procurement_procedure="direct")),
                     limited_contracts=Count("id", distinct=True, filter=Q(procurement_procedure="limited")),
                     open_contracts=Count("id", distinct=True, filter=Q(procurement_procedure="open")),
@@ -67,22 +67,16 @@ class Command(BaseCommand):
                     not_identified_method_contracts=Count(
                         "id", distinct=True, filter=Q(procurement_procedure="not_identified")
                     ),
-                    direct_amount=Sum(
-                        "goods_services__contract_value_usd", distinct=True, filter=Q(procurement_procedure="direct")
-                    ),
-                    limited_amount=Sum(
-                        "goods_services__contract_value_usd", distinct=True, filter=Q(procurement_procedure="limited")
-                    ),
-                    open_amount=Sum(
-                        "goods_services__contract_value_usd", distinct=True, filter=Q(procurement_procedure="open")
-                    ),
+                    direct_amount=Sum("contract_value_usd", distinct=True, filter=Q(procurement_procedure="direct")),
+                    limited_amount=Sum("contract_value_usd", distinct=True, filter=Q(procurement_procedure="limited")),
+                    open_amount=Sum("contract_value_usd", distinct=True, filter=Q(procurement_procedure="open")),
                     selective_amount=Sum(
-                        "goods_services__contract_value_usd",
+                        "contract_value_usd",
                         distinct=True,
                         filter=Q(procurement_procedure="selective"),
                     ),
                     not_identified_contracts_amount=Sum(
-                        "goods_services__contract_value_usd",
+                        "contract_value_usd",
                         distinct=True,
                         filter=Q(procurement_procedure="not_identified"),
                     ),
@@ -91,17 +85,11 @@ class Command(BaseCommand):
                     cancelled_contracts=Count("id", distinct=True, filter=Q(status="cancelled")),
                     not_identified_contracts=Count("id", distinct=True, filter=Q(status="not_identified")),
                     not_identified_contracts_sum=Sum(
-                        "goods_services__contract_value_usd", distinct=True, filter=Q(status="not_identified")
+                        "contract_value_usd", distinct=True, filter=Q(status="not_identified")
                     ),
-                    active_contracts_sum=Sum(
-                        "goods_services__contract_value_usd", distinct=True, filter=Q(status="active")
-                    ),
-                    completed_contracts_sum=Sum(
-                        "goods_services__contract_value_usd", distinct=True, filter=Q(status="completed")
-                    ),
-                    cancelled_contracts_sum=Sum(
-                        "goods_services__contract_value_usd", distinct=True, filter=Q(status="cancelled")
-                    ),
+                    active_contracts_sum=Sum("contract_value_usd", distinct=True, filter=Q(status="active")),
+                    completed_contracts_sum=Sum("contract_value_usd", distinct=True, filter=Q(status="completed")),
+                    cancelled_contracts_sum=Sum("contract_value_usd", distinct=True, filter=Q(status="cancelled")),
                 )
             )
             data["country"] = country.name
